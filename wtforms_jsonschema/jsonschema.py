@@ -43,7 +43,7 @@ class WTFormToJSONSchema(object):
     def __init__(self, conversions=None):
         self.conversions = conversions or self.DEFAULT_CONVERSIONS
 
-    def convert_form(self, form_cls, json_schema=None):
+    def convert_form(self, form, json_schema=None):
         if json_schema is None:
             json_schema = {
                 #'title':dockit_schema._meta
@@ -52,8 +52,7 @@ class WTFormToJSONSchema(object):
                 'properties': OrderedDict(),
             }
         #CONSIDER: base_fields when given a class, fields for when given an instance
-        for name, unbound_field in form_cls._unbound_fields:
-            field = unbound_field.bind(None, name)
+        for name, field in form._fields.items():
             json_schema['properties'][name] = self.convert_formfield(name, field, json_schema)
         return json_schema
 
@@ -75,10 +74,10 @@ class WTFormToJSONSchema(object):
         if params is not None:
             target_def.update(params)
         elif ftype == 'FormField':
-            target_def.update(self.convert_form(field.form_class))
+            target_def.update(self.convert_form(field.form_class(obj=getattr(field, '_obj', None))))
         elif ftype == 'FieldList':
             target_def['type'] = 'array'
-            subfield = field.unbound_field.bind(None, name)
+            subfield = field.unbound_field.bind(getattr(field, '_obj', None), name)
             target_def['items'] = self.convert_formfield(name, subfield, json_schema)
         elif hasattr(widget, 'input_type'):
             it = self.input_type_map.get(widget.input_type, 'StringField')
