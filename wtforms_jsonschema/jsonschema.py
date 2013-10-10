@@ -12,11 +12,21 @@ class WTFormToJSONSchema(object):
     DEFAULT_CONVERSIONS = {
         'URLField': {
             'type': 'string',
-            'format': 'url',
+            'format': 'uri',
+        },
+        'URIField': {
+            'type': 'string',
+            'format': 'uri',
+        },
+        'URIFileField': {
+            'type': 'string',
+            'format': 'uri',
+            'action': 'file-select', #not part of spec but flags behavior
         },
         'FileField': {
             'type': 'string',
             'format': 'uri',
+            'action': 'file-select', #not part of spec but flags behavior
         },
         'DateField': {
             'type': 'string',
@@ -40,8 +50,9 @@ class WTFormToJSONSchema(object):
         },
     }
 
-    def __init__(self, conversions=None):
+    def __init__(self, conversions=None, include_array_title=True):
         self.conversions = conversions or self.DEFAULT_CONVERSIONS
+        self.include_array_title = include_array_title
 
     def convert_form(self, form, json_schema=None):
         if json_schema is None:
@@ -76,6 +87,9 @@ class WTFormToJSONSchema(object):
         elif ftype == 'FormField':
             target_def.update(self.convert_form(field.form_class(obj=getattr(field, '_obj', None))))
         elif ftype == 'FieldList':
+            if not self.include_array_title:
+                target_def.pop('title')
+                target_def.pop('description')
             target_def['type'] = 'array'
             subfield = field.unbound_field.bind(getattr(field, '_obj', None), name)
             target_def['items'] = self.convert_formfield(name, subfield, json_schema)
