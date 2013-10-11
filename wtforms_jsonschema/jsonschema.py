@@ -62,9 +62,11 @@ class WTFormToJSONSchema(object):
                 'type': 'object',
                 'properties': OrderedDict(),
             }
-        #CONSIDER: base_fields when given a class, fields for when given an instance
-        for name, field in form._fields.items():
-            json_schema['properties'][name] = self.convert_formfield(name, field, json_schema)
+        #_unbound_fields preserves order, _fields does not
+        for name, unbound_field in form._unbound_fields:
+            field = form._fields[name]
+            json_schema['properties'][name] = \
+                self.convert_formfield(name, field, json_schema)
         return json_schema
 
     input_type_map = {
