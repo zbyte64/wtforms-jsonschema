@@ -50,8 +50,10 @@ class WTFormToJSONSchema(object):
         },
     }
 
-    def __init__(self, conversions=None, include_array_title=True):
+    def __init__(self, conversions=None, include_array_item_titles=True,
+            include_array_title=True):
         self.conversions = conversions or self.DEFAULT_CONVERSIONS
+        self.include_array_item_titles = include_array_item_titles
         self.include_array_title = include_array_title
 
     def convert_form(self, form, json_schema=None):
@@ -95,6 +97,9 @@ class WTFormToJSONSchema(object):
             target_def['type'] = 'array'
             subfield = field.unbound_field.bind(getattr(field, '_obj', None), name)
             target_def['items'] = self.convert_formfield(name, subfield, json_schema)
+            if not self.include_array_item_titles:
+                target_def['items'].pop('title')
+                target_def['items'].pop('description')
         elif hasattr(widget, 'input_type'):
             it = self.input_type_map.get(widget.input_type, 'StringField')
             target_def.update(self.conversions[it])
