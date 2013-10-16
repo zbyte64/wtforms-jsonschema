@@ -21,12 +21,12 @@ class WTFormToJSONSchema(object):
         'URIFileField': {
             'type': 'string',
             'format': 'uri',
-            'action': 'file-select', #not part of spec but flags behavior
+            'ux-widget': 'file-select', #not part of spec but flags behavior
         },
         'FileField': {
             'type': 'string',
             'format': 'uri',
-            'action': 'file-select', #not part of spec but flags behavior
+            'ux-widget': 'file-select', #not part of spec but flags behavior
         },
         'DateField': {
             'type': 'string',
@@ -83,8 +83,12 @@ class WTFormToJSONSchema(object):
             'description': field.description,
         }
         if field.flags.required:
-            target_def['required'] = [name]  # TODO this likely is not correct
+            target_def['required'] = True
+            json_schema.setdefault('required', list())
+            json_schema['required'].append(name)
         ftype = type(field).__name__
+        if hasattr(self, 'convert_%s' % ftype):
+            return getattr(self, 'convert_%s' % ftype)(name, field, json_schema)
         params = self.conversions.get(ftype)
         if params is not None:
             target_def.update(params)
