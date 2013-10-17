@@ -111,3 +111,21 @@ class WTFormToJSONSchema(object):
             target_def['type'] = 'string'
         return target_def
 
+    def convert_SelectField(self, name, field, json_schema):
+        values = list()
+        for val, label in field.choices:
+            if isinstance(label, (list, tuple)):  # wonky option groups
+                values.extend([x for x, y in label])
+            else:
+                values.append(val)
+
+        target_def = {
+            'title': field.label.text,
+            'description': field.description,
+            'enum': values,
+            'ux-widget-choices': field.choices,
+        }
+        if field.flags.required:
+            target_def['required'] = True
+        return target_def
+
