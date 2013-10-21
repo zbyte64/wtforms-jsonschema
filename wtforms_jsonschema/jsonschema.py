@@ -129,3 +129,15 @@ class WTFormToJSONSchema(object):
             target_def['required'] = True
         return target_def
 
+    def convert_RadioField(self, name, field, json_schema):
+        target_def = {
+            'title': field.label.text,
+            'description': field.description,
+            'enum': [x for x, y in field.choices],
+            'ux-widget': 'radio',
+            'ux-widget-choices': field.choices,
+        }
+        if field.flags.required:
+            target_def['required'] = True
+        return target_def
+
