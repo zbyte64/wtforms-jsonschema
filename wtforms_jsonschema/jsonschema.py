@@ -48,6 +48,39 @@ class WTFormToJSONSchema(object):
         'StringField': {
             'type': 'string',
         },
+        'SearchField': {
+            'type': 'string',
+        },
+        'TelField': {
+            'type': 'string',
+            'format': 'phone',
+        },
+        'EmailField': {
+            'type': 'string',
+            'format': 'email',
+        },
+        'DateTimeLocalField': {
+            'type': 'string',
+            'format': 'datetime',
+        },
+        'ColorField': {
+            'type': 'string',
+            'format': 'color',
+        },
+        #TODO min/max
+        'DecimalRangeField': {
+            'type': 'number',
+        },
+        'IntegerRangeField': {
+            'type': 'integer',
+        },
+    }
+
+    INPUT_TYPE_MAP = {
+        'text': 'StringField',
+        'checkbox': 'BooleanField',
+        'color': 'ColorField',
+        'tel': 'TelField',
     }
 
     def __init__(self, conversions=None, include_array_item_titles=True,
@@ -71,10 +104,7 @@ class WTFormToJSONSchema(object):
                 self.convert_formfield(name, field, json_schema)
         return json_schema
 
-    input_type_map = {
-        'text': 'StringField',
-        'checkbox': 'BooleanField',
-    }
+
 
     def convert_formfield(self, name, field, json_schema):
         widget = field.widget
@@ -105,7 +135,9 @@ class WTFormToJSONSchema(object):
                 target_def['items'].pop('title')
                 target_def['items'].pop('description')
         elif hasattr(widget, 'input_type'):
-            it = self.input_type_map.get(widget.input_type, 'StringField')
+            it = self.INPUT_TYPE_MAP.get(widget.input_type, 'StringField')
+            if hasattr(self, 'convert_%s' % it):
+                return getattr(self, 'convert_%s' % it)(name, field, json_schema)
             target_def.update(self.conversions[it])
         else:
             target_def['type'] = 'string'
@@ -123,7 +155,7 @@ class WTFormToJSONSchema(object):
             'title': field.label.text,
             'description': field.description,
             'enum': values,
-            'ux-widget-choices': field.choices,
+            'ux-widget-choices': list(field.choices),
         }
         if field.flags.required:
             target_def['required'] = True
@@ -135,7 +167,7 @@ class WTFormToJSONSchema(object):
             'description': field.description,
             'enum': [x for x, y in field.choices],
             'ux-widget': 'radio',
-            'ux-widget-choices': field.choices,
+            'ux-widget-choices': list(field.choices),
         }
         if field.flags.required:
             target_def['required'] = True
