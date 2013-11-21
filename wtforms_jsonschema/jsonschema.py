@@ -98,12 +98,15 @@ class WTFormToJSONSchema(object):
                 'properties': OrderedDict(),
             }
         #_unbound_fields preserves order, _fields does not
-        for name, unbound_field in form._unbound_fields:
+        if hasattr(form, '_unbound_fields'):
+            fields = [name for name, ufield in form._unbound_fields]
+        else:
+            fields = form._fields.keys()
+        for name in fields:
             field = form._fields[name]
             json_schema['properties'][name] = \
                 self.convert_formfield(name, field, json_schema)
         return json_schema
-
 
 
     def convert_formfield(self, name, field, json_schema):
