@@ -99,6 +99,8 @@ class WTFormToJSONSchema(object):
             }
         #_unbound_fields preserves order, _fields does not
         if hasattr(form, '_unbound_fields'):
+            if form._unbound_fields is None:
+                form = form()
             fields = [name for name, ufield in form._unbound_fields]
         else:
             fields = form._fields.keys()
