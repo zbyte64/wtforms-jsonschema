@@ -105,6 +105,8 @@ class WTFormToJSONSchema(object):
         else:
             fields = form._fields.keys()
         for name in fields:
+            if name not in form._fields:
+                continue
             field = form._fields[name]
             json_schema['properties'][name] = \
                 self.convert_formfield(name, field, json_schema)
