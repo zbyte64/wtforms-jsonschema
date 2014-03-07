@@ -89,7 +89,11 @@ class WTFormToJSONSchema(object):
         self.include_array_item_titles = include_array_item_titles
         self.include_array_title = include_array_title
 
-    def convert_form(self, form, json_schema=None):
+    def convert_form(self, form, json_schema=None, forms_seen=None, path=None):
+        if forms_seen is None:
+            forms_seen = dict()
+        if path is None:
+            path = []
         if json_schema is None:
             json_schema = {
                 #'title':dockit_schema._meta
@@ -97,6 +101,12 @@ class WTFormToJSONSchema(object):
                 'type': 'object',
                 'properties': OrderedDict(),
             }
+        key = id(form)
+        if key in forms_seen:
+            json_schema['$ref'] = '#'+'/'.join(forms_seen[key])
+            json_schema.pop('properties', None)
+            return json_schema
+        forms_seen[key] = path
         #_unbound_fields preserves order, _fields does not
         if hasattr(form, '_unbound_fields'):
             if form._unbound_fields is None:
@@ -109,12 +119,13 @@ class WTFormToJSONSchema(object):
                 continue
             field = form._fields[name]
             json_schema['properties'][name] = \
-                self.convert_formfield(name, field, json_schema)
+                self.convert_formfield(name, field, json_schema, forms_seen, path)
         return json_schema
 
 
-    def convert_formfield(self, name, field, json_schema):
+    def convert_formfield(self, name, field, json_schema, forms_seen, path):
         widget = field.widget
+        path = path + [name]
         target_def = {
             'title': field.label.text,
             'description': field.description,
@@ -130,17 +141,21 @@ class WTFormToJSONSchema(object):
         if params is not None:
             target_def.update(params)
         elif ftype == 'FormField':
-            target_def.update(self.convert_form(field.form_class(obj=getattr(field, '_obj', None))))
+            key = id(field.form_class)
+            if key in forms_seen:
+                return {"$ref": "#"+"/".join(forms_seen[key])}
+            forms_seen[key] = path
+            target_def.update(self.convert_form(field.form_class(obj=getattr(field, '_obj', None)), None, forms_seen, path))
         elif ftype == 'FieldList':
             if not self.include_array_title:
                 target_def.pop('title')
                 target_def.pop('description')
             target_def['type'] = 'array'
             subfield = field.unbound_field.bind(getattr(field, '_obj', None), name)
-            target_def['items'] = self.convert_formfield(name, subfield, json_schema)
+            target_def['items'] = self.convert_formfield(name, subfield, json_schema, forms_seen, path)
             if not self.include_array_item_titles:
-                target_def['items'].pop('title')
-                target_def['items'].pop('description')
+                target_def['items'].pop('title', None)
+                target_def['items'].pop('description', None)
         elif hasattr(widget, 'input_type'):
             it = self.INPUT_TYPE_MAP.get(widget.input_type, 'StringField')
             if hasattr(self, 'convert_%s' % it):
